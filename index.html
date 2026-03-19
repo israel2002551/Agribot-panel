@@ -654,7 +654,7 @@ function pub(topic, payload) {
 
 // ── MQTT CLIENT ──────────────────────────────────────────────
 const clientId   = 'AGRIWEB_'+Math.random().toString(36).substr(2,6).toUpperCase();
-const mqttClient = new Paho.Client(BROKER, WS_PORT, clientId);
+const mqttClient = new Paho.Client(BROKER, WS_PORT, "/mqtt", clientId);
 let connRetry = 0;
 
 mqttClient.onConnectionLost = () => {
