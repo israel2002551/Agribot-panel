@@ -7,520 +7,158 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
 <style>
-/* ══════════════════════════════════════════════════════════
-   DESIGN TOKENS
-══════════════════════════════════════════════════════════ */
 :root {
-  --bg0:       #020509;
-  --bg1:       #06090f;
-  --bg2:       #0a0f1a;
-  --bg3:       #0f1624;
-  --bg4:       #141d2e;
-  --surface:   #192338;
-
-  --cyan:      #00d4ff;
-  --cyan-d:    rgba(0,212,255,0.5);
-  --cyan-f:    rgba(0,212,255,0.12);
-  --green:     #00e676;
-  --green-d:   rgba(0,230,118,0.5);
-  --green-f:   rgba(0,230,118,0.1);
-  --amber:     #ffab00;
-  --amber-d:   rgba(255,171,0,0.5);
-  --amber-f:   rgba(255,171,0,0.1);
-  --red:       #ff1744;
-  --red-d:     rgba(255,23,68,0.45);
-  --red-f:     rgba(255,23,68,0.08);
-  --soil:      #a0522d;
-  --soil-d:    rgba(160,82,45,0.4);
-
-  --border:    rgba(0,212,255,0.1);
-  --border2:   rgba(0,212,255,0.25);
-  --text0:     #ddeeff;
-  --text1:     #7a9ab5;
-  --text2:     #3d5470;
-
-  --orb: 'Orbitron', sans-serif;
-  --mono: 'IBM Plex Mono', monospace;
-  --r: 8px;
-  --r2: 12px;
+  --bg0:#020509; --bg1:#06090f; --bg2:#0a0f1a; --bg3:#0f1624; --bg4:#141d2e; --surface:#192338;
+  --cyan:#00d4ff; --cyan-d:rgba(0,212,255,0.5); --cyan-f:rgba(0,212,255,0.12);
+  --green:#00e676; --green-d:rgba(0,230,118,0.5); --green-f:rgba(0,230,118,0.1);
+  --amber:#ffab00; --amber-d:rgba(255,171,0,0.5); --amber-f:rgba(255,171,0,0.1);
+  --red:#ff1744; --red-d:rgba(255,23,68,0.45); --red-f:rgba(255,23,68,0.08);
+  --soil:#a0522d; --soil-d:rgba(160,82,45,0.4);
+  --border:rgba(0,212,255,0.1); --border2:rgba(0,212,255,0.25);
+  --text0:#ddeeff; --text1:#7a9ab5; --text2:#3d5470;
+  --orb:'Orbitron',sans-serif; --mono:'IBM Plex Mono',monospace;
+  --r:8px; --r2:12px;
 }
-
-/* ══════════════════════════════════════════════════════════
-   RESET
-══════════════════════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14px; }
-body {
-  background: var(--bg0);
-  color: var(--text0);
-  font-family: var(--mono);
-  min-height: 100vh;
-  overflow-x: hidden;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-
-/* ══════════════════════════════════════════════════════════
-   BACKGROUND
-══════════════════════════════════════════════════════════ */
-#bgc { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-.scan { position: fixed; left: 0; right: 0; height: 1px;
-        background: linear-gradient(90deg,transparent,var(--cyan),transparent);
-        opacity: 0.06; animation: scan 10s linear infinite; z-index: 1; pointer-events: none; }
-@keyframes scan { from { top:-1px; } to { top:100vh; } }
-
-/* ══════════════════════════════════════════════════════════
-   SHELL
-══════════════════════════════════════════════════════════ */
-#app {
-  position: relative; z-index: 2;
-  max-width: 1160px; margin: 0 auto;
-  padding: 18px 16px 48px;
-  animation: rise .55s ease both;
-}
-@keyframes rise { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
-
-/* ══════════════════════════════════════════════════════════
-   HEADER
-══════════════════════════════════════════════════════════ */
-header {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap;
-  padding-bottom: 18px; margin-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-}
-.brand { display: flex; align-items: baseline; gap: 12px; }
-.brand-name {
-  font-family: var(--orb); font-size: 22px; font-weight: 900;
-  letter-spacing: .14em; color: var(--green);
-  text-shadow: 0 0 28px rgba(0,230,118,.45);
-}
-.brand-ver {
-  font-size: 9px; letter-spacing: .2em; color: var(--text2);
-  text-transform: uppercase;
-}
-.header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-
-.stat-chip {
-  display: flex; align-items: center; gap: 7px;
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 40px; padding: 6px 14px 6px 10px;
-  font-family: var(--orb); font-size: 9px; font-weight: 700;
-  letter-spacing: .14em; color: var(--text2);
-  transition: border-color .35s, color .35s, box-shadow .35s;
-}
-.stat-chip.ok  { border-color: var(--green-d); color: var(--green); box-shadow: 0 0 16px rgba(0,230,118,.06); }
-.stat-chip.err { border-color: var(--red-d);   color: var(--red); }
-.chip-dot { width:7px; height:7px; border-radius:50%; background:currentColor; flex-shrink:0; }
-.stat-chip.ok .chip-dot { animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 5px var(--green);} 50%{opacity:.3;box-shadow:none;} }
-
-/* ══════════════════════════════════════════════════════════
-   TAB BAR
-══════════════════════════════════════════════════════════ */
-.tabbar {
-  display: flex; gap: 3px;
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 4px;
-  margin-bottom: 20px; overflow-x: auto;
-  scrollbar-width: none;
-}
-.tabbar::-webkit-scrollbar { display: none; }
-.tab {
-  flex-shrink: 0; flex: 1; min-width: 60px;
-  background: transparent; border: none;
-  border-radius: 5px; padding: 9px 6px;
-  font-family: var(--orb); font-size: 8px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase;
-  color: var(--text2); cursor: pointer;
-  transition: background .2s, color .2s;
-  white-space: nowrap;
-}
-.tab.active { background: var(--bg4); color: var(--cyan); box-shadow: inset 0 0 0 1px var(--border2); }
-
-/* ══════════════════════════════════════════════════════════
-   PANELS
-══════════════════════════════════════════════════════════ */
-.panel { display: none; }
-.panel.active { display: block; }
-
-/* ══════════════════════════════════════════════════════════
-   SECTION LABEL
-══════════════════════════════════════════════════════════ */
-.slabel {
-  font-family: var(--orb); font-size: 8px; font-weight: 700;
-  letter-spacing: .22em; text-transform: uppercase; color: var(--text2);
-  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
-}
-.slabel::after { content:''; flex:1; height:1px; background: var(--border); }
-.slabel .dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
-
-/* ══════════════════════════════════════════════════════════
-   DRIVE PANEL
-══════════════════════════════════════════════════════════ */
-.drive-layout {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 16px;
-  align-items: start;
-}
-@media (max-width: 560px) {
-  .drive-layout { grid-template-columns: 1fr; }
-  .drive-right  { display: none; }
-}
-
-/* D-pad */
-.dpad {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
-  gap: 6px;
-  width: 200px; height: 200px;
-  margin: 0 auto;
-}
-.dpad-btn {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--r); font-size: 20px;
-  color: var(--text1); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .1s, border-color .1s, color .1s, box-shadow .1s;
-  touch-action: none;
-}
-.dpad-btn.held, .dpad-btn:active {
-  background: var(--cyan-f); border-color: var(--cyan);
-  color: var(--cyan); box-shadow: 0 0 16px rgba(0,212,255,.15);
-}
-.dpad-center {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 2px;
-  cursor: pointer; transition: background .1s, border-color .1s;
-}
-.dpad-center:active { background: rgba(255,23,68,.12); border-color: var(--red-d); }
-.dpad-empty { pointer-events: none; }
-
-/* Speed + indicator */
-.speed-panel {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r2); padding: 16px;
-  display: flex; flex-direction: column; gap: 14px;
-}
-.speed-label { font-size: 9px; color: var(--text2); letter-spacing: .18em; text-transform: uppercase; }
-.speed-val {
-  font-family: var(--orb); font-size: 38px; font-weight: 900;
-  color: var(--cyan); letter-spacing: .05em; line-height: 1;
-}
-.speed-unit { font-size: 10px; color: var(--text2); margin-top: 2px; }
-input[type=range] {
-  -webkit-appearance: none; appearance: none;
-  width: 100%; height: 4px; border-radius: 2px;
-  background: var(--bg0); outline: none; cursor: pointer;
-}
-input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
-  cursor: pointer;
-}
-
-/* Wheel live indicators */
-.wheel-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.wheel-cell {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 8px;
-  display: flex; flex-direction: column; gap: 5px;
-}
-.wheel-name { font-size: 9px; color: var(--text2); letter-spacing: .12em; }
-.wheel-bar-track { height: 3px; background: var(--bg0); border-radius: 2px; overflow: hidden; position: relative; }
-.wheel-bar-fill {
-  height: 100%; border-radius: 2px; width: 50%;
-  position: absolute; left: 50%; top: 0;
-  transform: translateX(-50%);
-  background: var(--cyan-d);
-  transition: width .15s ease;
-}
-.wheel-bar-fill.rev { background: var(--amber-d); }
-.wheel-pwm { font-family: var(--orb); font-size: 10px; color: var(--cyan); }
-
-/* ══════════════════════════════════════════════════════════
-   ARM PANEL — joint cards (same as before)
-══════════════════════════════════════════════════════════ */
-.joints-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-@media (min-width: 500px) { .joints-grid { grid-template-columns: repeat(3, 1fr); } }
-
-.jcard {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r2); padding: 13px 11px 11px;
-  display: flex; flex-direction: column; gap: 10px;
-  position: relative; overflow: hidden;
-  transition: border-color .2s, box-shadow .2s;
-}
-.jcard::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background: linear-gradient(90deg,transparent,var(--cyan-d),transparent);
-  opacity:0; transition:opacity .2s;
-}
-.jcard.firing { border-color: var(--border2); box-shadow: 0 0 18px rgba(0,212,255,.07); }
-.jcard.firing::before { opacity:1; }
-.jcard-num { position:absolute; top:11px; right:11px; font-family:var(--orb); font-size:8px; font-weight:700; color:var(--text2); letter-spacing:.14em; }
-.jcard-name { font-family:var(--orb); font-size:10px; font-weight:700; letter-spacing:.1em; }
-.arc-wrap { display:flex; align-items:center; gap:8px; }
-.arc-track { flex:1; height:3px; background:var(--bg0); border-radius:2px; position:relative; overflow:visible; }
-.arc-fill {
-  height:100%; border-radius:2px; width:50%;
-  background:linear-gradient(90deg,var(--cyan-f),var(--cyan-d));
-  transition:width .35s cubic-bezier(.25,1,.5,1); position:relative;
-}
-.arc-fill::after {
-  content:''; position:absolute; right:-1px; top:50%; transform:translateY(-50%);
-  width:7px; height:7px; border-radius:50%;
-  background:var(--cyan); box-shadow:0 0 6px var(--cyan);
-}
-.arc-num { font-size:9px; color:var(--cyan); min-width:24px; text-align:right; }
-.jbtn-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.jbtn {
-  padding:10px 0; border:1px solid var(--border); border-radius:var(--r);
-  background:var(--bg3); color:var(--text1); font-family:var(--orb); font-size:15px;
-  cursor:pointer; touch-action:none;
-  transition:background .1s, border-color .1s, color .1s, box-shadow .1s;
-}
-.jbtn.held, .jbtn:active {
-  background:var(--cyan-f); border-color:var(--cyan);
-  color:var(--cyan); box-shadow:0 0 12px rgba(0,212,255,.14);
-}
-
-/* ══════════════════════════════════════════════════════════
-   IK PANEL
-══════════════════════════════════════════════════════════ */
-.ik-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:14px; }
-.ik-field label { display:block; font-size:9px; color:var(--text2); letter-spacing:.18em; text-transform:uppercase; margin-bottom:5px; }
-.ik-field input {
-  width:100%; background:var(--bg3); border:1px solid var(--border);
-  border-radius:var(--r); color:var(--cyan); font-family:var(--orb);
-  font-size:24px; font-weight:700; padding:12px 8px; text-align:center;
-  outline:none; transition:border-color .2s, box-shadow .2s;
-  -moz-appearance:textfield; appearance:textfield;
-}
-.ik-field input::-webkit-outer-spin-button,
-.ik-field input::-webkit-inner-spin-button { -webkit-appearance:none; }
-.ik-field input:focus { border-color:var(--cyan-d); box-shadow:0 0 0 3px rgba(0,212,255,.07); }
-.ik-field input.err { border-color:var(--red-d); color:var(--red); }
-.reach-card {
-  background:var(--bg3); border:1px solid var(--border);
-  border-radius:var(--r); padding:12px 14px;
-  display:flex; flex-direction:column; gap:8px; margin-bottom:14px;
-}
-.reach-row { display:flex; justify-content:space-between; font-size:10px; color:var(--text1); }
-.reach-track { height:4px; background:var(--bg0); border-radius:2px; overflow:hidden; }
-.reach-fill { height:100%; border-radius:2px; background:var(--green); width:0; transition:width .3s, background .3s; }
-.reach-fill.warn { background:var(--amber); }
-.reach-fill.over { background:var(--red); }
-.btn-go {
-  width:100%; padding:14px; border:1px solid var(--green-d);
-  border-radius:var(--r); background:var(--green-f);
-  color:var(--green); font-family:var(--orb); font-size:11px; font-weight:700;
-  letter-spacing:.18em; text-transform:uppercase; cursor:pointer;
-  transition:background .2s, box-shadow .2s;
-}
-.btn-go:hover { background:rgba(0,230,118,.16); box-shadow:0 0 18px rgba(0,230,118,.1); }
-.btn-go:disabled { opacity:.3; pointer-events:none; }
-
-/* ══════════════════════════════════════════════════════════
-   FIELD OPS PANEL
-══════════════════════════════════════════════════════════ */
-.fops-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-@media (min-width: 600px) { .fops-grid { grid-template-columns: repeat(4, 1fr); } }
-
-.relay-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r2); padding: 16px 12px 12px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  cursor: pointer; position: relative; overflow: hidden;
-  transition: border-color .25s, box-shadow .25s, background .25s;
-}
-.relay-card::after {
-  content:''; position:absolute; inset:0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(0,230,118,.08), transparent 70%);
-  opacity:0; transition:opacity .25s; pointer-events:none;
-}
-.relay-card.on {
-  border-color: var(--green-d);
-  box-shadow: 0 0 22px rgba(0,230,118,.1);
-}
-.relay-card.on::after { opacity:1; }
-.relay-card.warn-on {
-  border-color: var(--amber-d);
-  box-shadow: 0 0 22px rgba(255,171,0,.1);
-}
-.relay-card.warn-on::after {
-  background: radial-gradient(ellipse at 50% 0%, rgba(255,171,0,.08), transparent 70%);
-  opacity: 1;
-}
-
-.relay-icon {
-  font-size: 28px;
-  line-height: 1;
-  filter: grayscale(1) opacity(.4);
-  transition: filter .25s;
-}
-.relay-card.on .relay-icon,
-.relay-card.warn-on .relay-icon { filter: none; }
-
-.relay-label {
-  font-family: var(--orb); font-size: 9px; font-weight: 700;
-  letter-spacing: .15em; text-align: center; color: var(--text2);
-  transition: color .25s;
-}
-.relay-card.on .relay-label     { color: var(--green); }
-.relay-card.warn-on .relay-label { color: var(--amber); }
-
-.relay-badge {
-  font-size: 8px; font-family: var(--orb); letter-spacing: .12em;
-  padding: 3px 10px; border-radius: 20px;
-  background: var(--bg3); border: 1px solid var(--border);
-  color: var(--text2); transition: background .25s, color .25s, border-color .25s;
-}
-.relay-card.on .relay-badge     { background: var(--green-f); color: var(--green); border-color: var(--green-d); }
-.relay-card.warn-on .relay-badge { background: var(--amber-f); color: var(--amber); border-color: var(--amber-d); }
-
-/* Linear actuator row */
-.lin-row {
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px; margin-bottom: 20px;
-}
-.lin-btn {
-  padding: 14px 8px; border-radius: var(--r); border: 1px solid var(--border);
-  background: var(--bg2); color: var(--text1); cursor: pointer;
-  font-family: var(--orb); font-size: 10px; font-weight: 700;
-  letter-spacing: .12em; text-align: center;
-  transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
-  display: flex; flex-direction: column; align-items: center; gap: 7px;
-}
-.lin-btn .lin-icon { font-size: 22px; }
-.lin-btn.extend:hover, .lin-btn.extend.active {
-  background: var(--cyan-f); border-color: var(--cyan-d); color: var(--cyan);
-  box-shadow: 0 0 14px rgba(0,212,255,.1);
-}
-.lin-btn.retract:hover, .lin-btn.retract.active {
-  background: var(--amber-f); border-color: var(--amber-d); color: var(--amber);
-  box-shadow: 0 0 14px rgba(255,171,0,.1);
-}
-.lin-btn.stop-btn:hover, .lin-btn.stop-btn.active {
-  background: var(--red-f); border-color: var(--red-d); color: var(--red);
-  box-shadow: 0 0 14px rgba(255,23,68,.1);
-}
-
-/* Auto-loosen sequence */
-.auto-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r2); padding: 20px;
-  display: flex; flex-direction: column; gap: 14px;
-}
-.auto-header {
-  display: flex; justify-content: space-between; align-items: center;
-}
-.auto-title { font-family: var(--orb); font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--text0); }
-.auto-status-row {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
-}
-.auto-status-cell {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 8px 6px;
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  font-size: 9px; color: var(--text2); font-family: var(--orb); letter-spacing: .1em;
-}
-.auto-status-cell .dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--bg0); border: 1px solid var(--border);
-  transition: background .3s, box-shadow .3s;
-}
-.auto-status-cell.live .dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.auto-status-cell.live { color: var(--green); }
-.auto-status-cell.lin-live .dot { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); animation: linpulse 3.5s ease-in-out infinite; }
-.auto-status-cell.lin-live { color: var(--cyan); }
-@keyframes linpulse { 0%,49%{opacity:1;} 50%,100%{opacity:.45;} }
-
-.auto-timer {
-  font-family: var(--orb); font-size: 32px; font-weight: 900;
-  color: var(--text2); letter-spacing: .1em; text-align: center;
-  transition: color .3s;
-}
-.auto-timer.running { color: var(--green); }
-
-.btn-autoloosen {
-  width: 100%; padding: 15px; border-radius: var(--r);
-  font-family: var(--orb); font-size: 12px; font-weight: 900;
-  letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
-  border: 2px solid var(--soil-d); background: rgba(160,82,45,.08);
-  color: #c8825c; transition: all .25s;
-}
-.btn-autoloosen:hover { background: rgba(160,82,45,.16); box-shadow: 0 0 22px rgba(160,82,45,.15); }
-.btn-autoloosen.running {
-  border-color: var(--red-d); background: var(--red-f); color: var(--red);
-  animation: warnblink 1.5s ease-in-out infinite;
-}
-@keyframes warnblink { 0%,100%{box-shadow:0 0 12px rgba(255,23,68,.12);} 50%{box-shadow:0 0 28px rgba(255,23,68,.28);} }
-
-/* ══════════════════════════════════════════════════════════
-   TELEMETRY PANEL
-══════════════════════════════════════════════════════════ */
-.telem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-@media (min-width: 640px) { .telem-grid { grid-template-columns: repeat(4, 1fr); } }
-.telem-cell {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 10px 12px;
-  display: flex; flex-direction: column; gap: 4px;
-  transition: border-color .3s;
-}
-.telem-cell.flash { border-color: var(--border2); }
-.tc-key { font-size: 9px; color: var(--text2); letter-spacing: .14em; text-transform: uppercase; }
-.tc-val { font-family: var(--orb); font-size: 16px; font-weight: 700; color: var(--cyan); line-height: 1; }
-
-.console {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r2); padding: 14px;
-  max-height: 260px; overflow-y: auto;
-  font-size: 10px; line-height: 1.9;
-}
-.console::-webkit-scrollbar { width: 3px; }
-.console::-webkit-scrollbar-track { background: transparent; }
-.console::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-.log-line { display: flex; gap: 10px; }
-.l-ts  { color: var(--text2); flex-shrink: 0; }
-.l-rx  { color: var(--cyan-d); }
-.l-tx  { color: var(--green-d); }
-.l-err { color: rgba(255,23,68,.8); }
-.l-sys { color: var(--amber-d); }
-
-/* ══════════════════════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════════════════════ */
-#toast {
-  position: fixed; bottom: 24px; left: 50%;
-  transform: translateX(-50%) translateY(70px);
-  background: var(--bg4); border: 1px solid var(--border);
-  border-radius: 40px; padding: 9px 22px;
-  font-family: var(--orb); font-size: 9px; font-weight: 700;
-  letter-spacing: .14em; text-transform: uppercase;
-  pointer-events: none; opacity: 0; z-index: 999; white-space: nowrap;
-  transition: transform .28s cubic-bezier(.34,1.56,.64,1), opacity .25s;
-}
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-#toast.ok  { border-color: var(--green-d); color: var(--green); }
-#toast.war { border-color: var(--amber-d); color: var(--amber); }
-#toast.err { border-color: var(--red-d);   color: var(--red);   }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{background:var(--bg0);color:var(--text0);font-family:var(--mono);min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;user-select:none}
+#bgc{position:fixed;inset:0;z-index:0;pointer-events:none}
+.scan{position:fixed;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.06;animation:scan 10s linear infinite;z-index:1;pointer-events:none}
+@keyframes scan{from{top:-1px}to{top:100vh}}
+#app{position:relative;z-index:2;max-width:1160px;margin:0 auto;padding:18px 16px 48px;animation:rise .55s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:18px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:baseline;gap:12px}
+.brand-name{font-family:var(--orb);font-size:22px;font-weight:900;letter-spacing:.14em;color:var(--green);text-shadow:0 0 28px rgba(0,230,118,.45)}
+.brand-ver{font-size:9px;letter-spacing:.2em;color:var(--text2);text-transform:uppercase}
+.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stat-chip{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:40px;padding:6px 14px 6px 10px;font-family:var(--orb);font-size:9px;font-weight:700;letter-spacing:.14em;color:var(--text2);transition:border-color .35s,color .35s,box-shadow .35s}
+.stat-chip.ok{border-color:var(--green-d);color:var(--green);box-shadow:0 0 16px rgba(0,230,118,.06)}
+.stat-chip.err{border-color:var(--red-d);color:var(--red)}
+.chip-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.stat-chip.ok .chip-dot{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 5px var(--green)}50%{opacity:.3;box-shadow:none}}
+.tabbar{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:4px;margin-bottom:20px;overflow-x:auto;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;flex:1;min-width:60px;background:transparent;border:none;border-radius:5px;padding:9px 6px;font-family:var(--orb);font-size:8px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text2);cursor:pointer;transition:background .2s,color .2s;white-space:nowrap}
+.tab.active{background:var(--bg4);color:var(--cyan);box-shadow:inset 0 0 0 1px var(--border2)}
+.panel{display:none}
+.panel.active{display:block}
+.slabel{font-family:var(--orb);font-size:8px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--text2);display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.slabel::after{content:'';flex:1;height:1px;background:var(--border)}
+.slabel .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.drive-layout{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:start}
+@media(max-width:560px){.drive-layout{grid-template-columns:1fr}.drive-right{display:none}}
+.dpad{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;gap:6px;width:200px;height:200px;margin:0 auto}
+.dpad-btn{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-size:20px;color:var(--text1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s,border-color .1s,color .1s,box-shadow .1s;touch-action:none}
+.dpad-btn.held,.dpad-btn:active{background:var(--cyan-f);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 16px rgba(0,212,255,.15)}
+.dpad-center{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:background .1s,border-color .1s}
+.dpad-center:active{background:rgba(255,23,68,.12);border-color:var(--red-d)}
+.dpad-empty{pointer-events:none}
+.speed-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;display:flex;flex-direction:column;gap:14px}
+.speed-label{font-size:9px;color:var(--text2);letter-spacing:.18em;text-transform:uppercase}
+.speed-val{font-family:var(--orb);font-size:38px;font-weight:900;color:var(--cyan);letter-spacing:.05em;line-height:1}
+.speed-unit{font-size:10px;color:var(--text2);margin-top:2px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--bg0);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);cursor:pointer}
+.wheel-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.wheel-cell{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px;display:flex;flex-direction:column;gap:5px}
+.wheel-name{font-size:9px;color:var(--text2);letter-spacing:.12em}
+.wheel-bar-track{height:3px;background:var(--bg0);border-radius:2px;overflow:hidden;position:relative}
+.wheel-bar-fill{height:100%;border-radius:2px;width:50%;position:absolute;left:50%;top:0;transform:translateX(-50%);background:var(--cyan-d);transition:width .15s ease}
+.wheel-bar-fill.rev{background:var(--amber-d)}
+.wheel-pwm{font-family:var(--orb);font-size:10px;color:var(--cyan)}
+.joints-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:500px){.joints-grid{grid-template-columns:repeat(3,1fr)}}
+.jcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:13px 11px 11px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.jcard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan-d),transparent);opacity:0;transition:opacity .2s}
+.jcard.firing{border-color:var(--border2);box-shadow:0 0 18px rgba(0,212,255,.07)}
+.jcard.firing::before{opacity:1}
+.jcard-num{position:absolute;top:11px;right:11px;font-family:var(--orb);font-size:8px;font-weight:700;color:var(--text2);letter-spacing:.14em}
+.jcard-name{font-family:var(--orb);font-size:10px;font-weight:700;letter-spacing:.1em}
+.arc-wrap{display:flex;align-items:center;gap:8px}
+.arc-track{flex:1;height:3px;background:var(--bg0);border-radius:2px;position:relative;overflow:visible}
+.arc-fill{height:100%;border-radius:2px;width:50%;background:linear-gradient(90deg,var(--cyan-f),var(--cyan-d));transition:width .35s cubic-bezier(.25,1,.5,1);position:relative}
+.arc-fill::after{content:'';position:absolute;right:-1px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.arc-num{font-size:9px;color:var(--cyan);min-width:24px;text-align:right}
+.jbtn-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.jbtn{padding:10px 0;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--text1);font-family:var(--orb);font-size:15px;cursor:pointer;touch-action:none;transition:background .1s,border-color .1s,color .1s,box-shadow .1s}
+.jbtn.held,.jbtn:active{background:var(--cyan-f);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px rgba(0,212,255,.14)}
+.ik-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.ik-field label{display:block;font-size:9px;color:var(--text2);letter-spacing:.18em;text-transform:uppercase;margin-bottom:5px}
+.ik-field input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--cyan);font-family:var(--orb);font-size:24px;font-weight:700;padding:12px 8px;text-align:center;outline:none;transition:border-color .2s,box-shadow .2s;-moz-appearance:textfield;appearance:textfield}
+.ik-field input::-webkit-outer-spin-button,.ik-field input::-webkit-inner-spin-button{-webkit-appearance:none}
+.ik-field input:focus{border-color:var(--cyan-d);box-shadow:0 0 0 3px rgba(0,212,255,.07)}
+.ik-field input.err{border-color:var(--red-d);color:var(--red)}
+.reach-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.reach-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text1)}
+.reach-track{height:4px;background:var(--bg0);border-radius:2px;overflow:hidden}
+.reach-fill{height:100%;border-radius:2px;background:var(--green);width:0;transition:width .3s,background .3s}
+.reach-fill.warn{background:var(--amber)}
+.reach-fill.over{background:var(--red)}
+.btn-go{width:100%;padding:14px;border:1px solid var(--green-d);border-radius:var(--r);background:var(--green-f);color:var(--green);font-family:var(--orb);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;transition:background .2s,box-shadow .2s}
+.btn-go:hover{background:rgba(0,230,118,.16);box-shadow:0 0 18px rgba(0,230,118,.1)}
+.btn-go:disabled{opacity:.3;pointer-events:none}
+.fops-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(min-width:600px){.fops-grid{grid-template-columns:repeat(4,1fr)}}
+.relay-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 12px 12px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .25s,box-shadow .25s,background .25s}
+.relay-card::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(0,230,118,.08),transparent 70%);opacity:0;transition:opacity .25s;pointer-events:none}
+.relay-card.on{border-color:var(--green-d);box-shadow:0 0 22px rgba(0,230,118,.1)}
+.relay-card.on::after{opacity:1}
+.relay-card.warn-on{border-color:var(--amber-d);box-shadow:0 0 22px rgba(255,171,0,.1)}
+.relay-card.warn-on::after{background:radial-gradient(ellipse at 50% 0%,rgba(255,171,0,.08),transparent 70%);opacity:1}
+.relay-icon{font-size:28px;line-height:1;filter:grayscale(1) opacity(.4);transition:filter .25s}
+.relay-card.on .relay-icon,.relay-card.warn-on .relay-icon{filter:none}
+.relay-label{font-family:var(--orb);font-size:9px;font-weight:700;letter-spacing:.15em;text-align:center;color:var(--text2);transition:color .25s}
+.relay-card.on .relay-label{color:var(--green)}
+.relay-card.warn-on .relay-label{color:var(--amber)}
+.relay-badge{font-size:8px;font-family:var(--orb);letter-spacing:.12em;padding:3px 10px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:background .25s,color .25s,border-color .25s}
+.relay-card.on .relay-badge{background:var(--green-f);color:var(--green);border-color:var(--green-d)}
+.relay-card.warn-on .relay-badge{background:var(--amber-f);color:var(--amber);border-color:var(--amber-d)}
+.lin-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px}
+.lin-btn{padding:14px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--text1);cursor:pointer;font-family:var(--orb);font-size:10px;font-weight:700;letter-spacing:.12em;text-align:center;transition:background .15s,border-color .15s,color .15s,box-shadow .15s;display:flex;flex-direction:column;align-items:center;gap:7px}
+.lin-btn .lin-icon{font-size:22px}
+.lin-btn.extend:hover,.lin-btn.extend.active{background:var(--cyan-f);border-color:var(--cyan-d);color:var(--cyan);box-shadow:0 0 14px rgba(0,212,255,.1)}
+.lin-btn.retract:hover,.lin-btn.retract.active{background:var(--amber-f);border-color:var(--amber-d);color:var(--amber);box-shadow:0 0 14px rgba(255,171,0,.1)}
+.lin-btn.stop-btn:hover,.lin-btn.stop-btn.active{background:var(--red-f);border-color:var(--red-d);color:var(--red);box-shadow:0 0 14px rgba(255,23,68,.1)}
+.auto-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;display:flex;flex-direction:column;gap:14px}
+.auto-header{display:flex;justify-content:space-between;align-items:center}
+.auto-title{font-family:var(--orb);font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--text0)}
+.auto-status-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.auto-status-cell{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:9px;color:var(--text2);font-family:var(--orb);letter-spacing:.1em}
+.auto-status-cell .dot{width:8px;height:8px;border-radius:50%;background:var(--bg0);border:1px solid var(--border);transition:background .3s,box-shadow .3s}
+.auto-status-cell.live .dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+.auto-status-cell.live{color:var(--green)}
+.auto-status-cell.lin-live .dot{background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:linpulse 3.5s ease-in-out infinite}
+.auto-status-cell.lin-live{color:var(--cyan)}
+@keyframes linpulse{0%,49%{opacity:1}50%,100%{opacity:.45}}
+.auto-timer{font-family:var(--orb);font-size:32px;font-weight:900;color:var(--text2);letter-spacing:.1em;text-align:center;transition:color .3s}
+.auto-timer.running{color:var(--green)}
+.btn-autoloosen{width:100%;padding:15px;border-radius:var(--r);font-family:var(--orb);font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border:2px solid var(--soil-d);background:rgba(160,82,45,.08);color:#c8825c;transition:all .25s}
+.btn-autoloosen:hover{background:rgba(160,82,45,.16);box-shadow:0 0 22px rgba(160,82,45,.15)}
+.btn-autoloosen.running{border-color:var(--red-d);background:var(--red-f);color:var(--red);animation:warnblink 1.5s ease-in-out infinite}
+@keyframes warnblink{0%,100%{box-shadow:0 0 12px rgba(255,23,68,.12)}50%{box-shadow:0 0 28px rgba(255,23,68,.28)}}
+.telem-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+@media(min-width:640px){.telem-grid{grid-template-columns:repeat(4,1fr)}}
+.telem-cell{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:4px;transition:border-color .3s}
+.telem-cell.flash{border-color:var(--border2)}
+.tc-key{font-size:9px;color:var(--text2);letter-spacing:.14em;text-transform:uppercase}
+.tc-val{font-family:var(--orb);font-size:16px;font-weight:700;color:var(--cyan);line-height:1}
+.console{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;max-height:260px;overflow-y:auto;font-size:10px;line-height:1.9}
+.console::-webkit-scrollbar{width:3px}
+.console::-webkit-scrollbar-track{background:transparent}
+.console::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.log-line{display:flex;gap:10px}
+.l-ts{color:var(--text2);flex-shrink:0}
+.l-rx{color:var(--cyan-d)}
+.l-tx{color:var(--green-d)}
+.l-err{color:rgba(255,23,68,.8)}
+.l-sys{color:var(--amber-d)}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--bg4);border:1px solid var(--border);border-radius:40px;padding:9px 22px;font-family:var(--orb);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;pointer-events:none;opacity:0;z-index:999;white-space:nowrap;transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .25s}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green-d);color:var(--green)}
+#toast.war{border-color:var(--amber-d);color:var(--amber)}
+#toast.err{border-color:var(--red-d);color:var(--red)}
 </style>
 </head>
 <body>
@@ -530,138 +168,96 @@ input[type=range]::-webkit-slider-thumb {
 
 <div id="app">
 
-  <!-- ═══════════ HEADER ═══════════════════════════════════════ -->
+  <!-- HEADER -->
   <header>
     <div class="brand">
-      <div class="brand-name">AGRIBOT‑S3</div>
-      <div class="brand-ver">Yam Harvester Control v1.0</div>
+      <div class="brand-name">AGRIBOT&#8209;S3</div>
+      <div class="brand-ver">Yam Harvester Control v1.1</div>
     </div>
     <div class="header-right">
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
         <span style="font-size:8px;color:var(--text2);letter-spacing:.18em">BROKER</span>
-        <span style="font-size:10px;color:var(--text1)">test.mosquitto.org</span>
+        <!-- FIX 1: plain ws:// on port 8083 (no SSL) -->
+        <span style="font-size:10px;color:var(--text1)">ws://broker.emqx.io:8083/mqtt</span>
       </div>
-      <div class="stat-chip disconnected" id="conn-pill">
+      <div class="stat-chip" id="conn-pill">
         <div class="chip-dot"></div>
         <span id="conn-txt">OFFLINE</span>
       </div>
     </div>
   </header>
 
-  <!-- ═══════════ TABS ══════════════════════════════════════════ -->
+  <!-- TABS -->
   <div class="tabbar">
-    <button class="tab active" onclick="swTab('drive',this)">🚗 Drive</button>
-    <button class="tab"        onclick="swTab('arm',this)">🦾 Arm</button>
-    <button class="tab"        onclick="swTab('ik',this)">🎯 IK Target</button>
-    <button class="tab"        onclick="swTab('fops',this)">🌱 Field Ops</button>
-    <button class="tab"        onclick="swTab('telem',this)">📡 Telemetry</button>
+    <button class="tab active" onclick="swTab('drive',this)">&#128663; Drive</button>
+    <button class="tab"        onclick="swTab('arm',this)">&#129470; Arm</button>
+    <button class="tab"        onclick="swTab('ik',this)">&#127919; IK Target</button>
+    <button class="tab"        onclick="swTab('fops',this)">&#127807; Field Ops</button>
+    <button class="tab"        onclick="swTab('telem',this)">&#128225; Telemetry</button>
   </div>
 
-  <!-- ═══════════ DRIVE PANEL ══════════════════════════════════ -->
+  <!-- DRIVE PANEL -->
   <div class="panel active" id="panel-drive">
     <div class="drive-layout">
 
-      <!-- Speed control -->
       <div class="speed-panel">
         <div>
           <div class="speed-label">Drive Speed</div>
           <div class="speed-val" id="spd-display">180</div>
-          <div class="speed-unit">PWM (0 – 255)</div>
+          <div class="speed-unit">PWM (0 &ndash; 255)</div>
         </div>
         <input type="range" id="speed-slider" min="60" max="255" value="180"
                oninput="document.getElementById('spd-display').textContent=this.value">
         <div>
           <div class="slabel" style="margin-bottom:8px"><span class="dot"></span> Wheel Output</div>
           <div class="wheel-grid">
-            <div class="wheel-cell">
-              <div class="wheel-name">FL</div>
-              <div class="wheel-bar-track"><div class="wheel-bar-fill" id="wfl"></div></div>
-              <div class="wheel-pwm" id="wfl-v">0</div>
-            </div>
-            <div class="wheel-cell">
-              <div class="wheel-name">FR</div>
-              <div class="wheel-bar-track"><div class="wheel-bar-fill" id="wfr"></div></div>
-              <div class="wheel-pwm" id="wfr-v">0</div>
-            </div>
-            <div class="wheel-cell">
-              <div class="wheel-name">BL</div>
-              <div class="wheel-bar-track"><div class="wheel-bar-fill" id="wbl"></div></div>
-              <div class="wheel-pwm" id="wbl-v">0</div>
-            </div>
-            <div class="wheel-cell">
-              <div class="wheel-name">BR</div>
-              <div class="wheel-bar-track"><div class="wheel-bar-fill" id="wbr"></div></div>
-              <div class="wheel-pwm" id="wbr-v">0</div>
-            </div>
+            <div class="wheel-cell"><div class="wheel-name">FL</div><div class="wheel-bar-track"><div class="wheel-bar-fill" id="wfl"></div></div><div class="wheel-pwm" id="wfl-v">0</div></div>
+            <div class="wheel-cell"><div class="wheel-name">FR</div><div class="wheel-bar-track"><div class="wheel-bar-fill" id="wfr"></div></div><div class="wheel-pwm" id="wfr-v">0</div></div>
+            <div class="wheel-cell"><div class="wheel-name">BL</div><div class="wheel-bar-track"><div class="wheel-bar-fill" id="wbl"></div></div><div class="wheel-pwm" id="wbl-v">0</div></div>
+            <div class="wheel-cell"><div class="wheel-name">BR</div><div class="wheel-bar-track"><div class="wheel-bar-fill" id="wbr"></div></div><div class="wheel-pwm" id="wbr-v">0</div></div>
           </div>
         </div>
       </div>
 
-      <!-- D-pad -->
       <div>
         <div class="dpad">
-          <!-- Row 1 -->
           <div class="dpad-empty"></div>
-          <button class="dpad-btn" id="db-fwd">▲</button>
+          <button class="dpad-btn" id="db-fwd">&#9650;</button>
           <div class="dpad-empty"></div>
-          <!-- Row 2 -->
-          <button class="dpad-btn" id="db-left">◀</button>
-          <div class="dpad-center" id="db-stop" onclick="drive('stop')">
+          <button class="dpad-btn" id="db-left">&#9664;</button>
+          <div class="dpad-center" onclick="sendStop()">
             <span style="font-size:11px;color:var(--red);font-family:var(--orb);font-weight:700;letter-spacing:.1em">STOP</span>
           </div>
-          <button class="dpad-btn" id="db-right">▶</button>
-          <!-- Row 3 -->
+          <button class="dpad-btn" id="db-right">&#9654;</button>
           <div class="dpad-empty"></div>
-          <button class="dpad-btn" id="db-bwd">▼</button>
+          <button class="dpad-btn" id="db-bwd">&#9660;</button>
           <div class="dpad-empty"></div>
         </div>
-        <div style="text-align:center;margin-top:10px;font-size:9px;color:var(--text2);letter-spacing:.14em;">
-          ARROW KEYS SUPPORTED
-        </div>
+        <div style="text-align:center;margin-top:10px;font-size:9px;color:var(--text2);letter-spacing:.14em">ARROW KEYS SUPPORTED</div>
       </div>
 
-      <!-- Keyboard shortcuts (desktop) -->
-      <div class="drive-right speed-panel" style="gap:10px;">
+      <div class="drive-right speed-panel" style="gap:10px">
         <div class="slabel">Controls</div>
         <div style="display:flex;flex-direction:column;gap:6px;font-size:10px;color:var(--text1)">
-          <div style="display:flex;justify-content:space-between">
-            <span>Forward</span>
-            <span style="color:var(--cyan)">↑ / W</span>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span>Backward</span>
-            <span style="color:var(--cyan)">↓ / S</span>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span>Turn Left</span>
-            <span style="color:var(--cyan)">← / A</span>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span>Turn Right</span>
-            <span style="color:var(--cyan)">→ / D</span>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span>Stop</span>
-            <span style="color:var(--red)">Space</span>
-          </div>
+          <div style="display:flex;justify-content:space-between"><span>Forward</span><span style="color:var(--cyan)">&#8593; / W</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Backward</span><span style="color:var(--cyan)">&#8595; / S</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Turn Left</span><span style="color:var(--cyan)">&#8592; / A</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Turn Right</span><span style="color:var(--cyan)">&#8594; / D</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Stop</span><span style="color:var(--red)">Space</span></div>
         </div>
         <div style="padding-top:8px;border-top:1px solid var(--border)">
           <div class="slabel" style="margin-bottom:8px">Mission</div>
           <div style="font-size:10px;color:var(--text1);line-height:1.8">
-            1. Drive to yam location<br>
-            2. Activate Field Ops<br>
-            3. Auto-loosen soil<br>
-            4. Use Arm to harvest
+            1. Drive to yam location<br>2. Activate Field Ops<br>3. Auto-loosen soil<br>4. Use Arm to harvest
           </div>
         </div>
       </div>
-
     </div>
-  </div><!-- /drive -->
+  </div>
 
-  <!-- ═══════════ ARM PANEL ════════════════════════════════════ -->
+  <!-- ARM PANEL -->
   <div class="panel" id="panel-arm">
-    <div class="slabel"><span class="dot"></span> 6-DOF Arm — Manual Control</div>
+    <div class="slabel"><span class="dot"></span> 6-DOF Arm &mdash; Manual Control</div>
     <div class="joints-grid" id="joints-grid"></div>
     <div class="slabel" style="margin-top:20px">Keyboard</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:10px;color:var(--text1)">
@@ -674,60 +270,46 @@ input[type=range]::-webkit-slider-thumb {
     </div>
   </div>
 
-  <!-- ═══════════ IK PANEL ═════════════════════════════════════ -->
+  <!-- IK PANEL -->
   <div class="panel" id="panel-ik">
     <div class="slabel"><span class="dot"></span> Target Position (cm)</div>
     <div class="ik-grid">
-      <div class="ik-field">
-        <label>X — Forward</label>
-        <input type="number" id="ik-x" value="10" step="0.5" oninput="calcReach()">
-      </div>
-      <div class="ik-field">
-        <label>Y — Lateral</label>
-        <input type="number" id="ik-y" value="0"  step="0.5" oninput="calcReach()">
-      </div>
-      <div class="ik-field">
-        <label>Z — Height</label>
-        <input type="number" id="ik-z" value="8"  step="0.5" oninput="calcReach()">
-      </div>
+      <div class="ik-field"><label>X &mdash; Forward</label><input type="number" id="ik-x" value="10" step="0.5" oninput="calcReach()"></div>
+      <div class="ik-field"><label>Y &mdash; Lateral</label><input type="number" id="ik-y" value="0"  step="0.5" oninput="calcReach()"></div>
+      <div class="ik-field"><label>Z &mdash; Height</label> <input type="number" id="ik-z" value="8"  step="0.5" oninput="calcReach()"></div>
     </div>
     <div class="reach-card">
       <div class="reach-row">
         <span>Distance to target</span>
-        <span id="rval" style="font-family:var(--orb);font-size:12px;color:var(--cyan)">—</span>
+        <span id="rval" style="font-family:var(--orb);font-size:12px;color:var(--cyan)">&mdash;</span>
       </div>
       <div class="reach-track"><div class="reach-fill" id="rbar"></div></div>
       <div class="reach-row" style="font-size:9px;color:var(--text2)"><span>MIN 3 cm</span><span>MAX 27 cm (15+12)</span></div>
     </div>
-    <button class="btn-go" id="btn-go" onclick="sendIK()">▶ &nbsp; Execute IK Target</button>
+    <button class="btn-go" id="btn-go" onclick="sendIK()">&#9654; &nbsp; Execute IK Target</button>
   </div>
 
-  <!-- ═══════════ FIELD OPS PANEL ══════════════════════════════ -->
+  <!-- FIELD OPS PANEL -->
   <div class="panel" id="panel-fops">
-
     <div class="slabel"><span class="dot"></span> Soil Loosening Actuators</div>
     <div class="fops-grid">
-      <!-- Worm Gear 1 -->
       <div class="relay-card" id="rc-worm1" onclick="toggleRelay('worm1','rc-worm1')">
-        <div class="relay-icon">⚙️</div>
+        <div class="relay-icon">&#9881;&#65039;</div>
         <div class="relay-label">Worm Gear 1</div>
         <div class="relay-badge" id="rb-worm1">OFF</div>
       </div>
-      <!-- Worm Gear 2 -->
       <div class="relay-card" id="rc-worm2" onclick="toggleRelay('worm2','rc-worm2')">
-        <div class="relay-icon">⚙️</div>
+        <div class="relay-icon">&#9881;&#65039;</div>
         <div class="relay-label">Worm Gear 2</div>
         <div class="relay-badge" id="rb-worm2">OFF</div>
       </div>
-      <!-- Pump -->
       <div class="relay-card" id="rc-pump" onclick="toggleRelay('pump','rc-pump')">
-        <div class="relay-icon">💧</div>
+        <div class="relay-icon">&#128167;</div>
         <div class="relay-label">Water Pump</div>
         <div class="relay-badge" id="rb-pump">OFF</div>
       </div>
-      <!-- System status -->
-      <div class="relay-card" style="pointer-events:none;cursor:default;">
-        <div class="relay-icon">🌱</div>
+      <div class="relay-card" style="pointer-events:none;cursor:default" id="rc-status">
+        <div class="relay-icon">&#127807;</div>
         <div class="relay-label">Field Status</div>
         <div id="fops-sys-badge" class="relay-badge">IDLE</div>
       </div>
@@ -735,18 +317,9 @@ input[type=range]::-webkit-slider-thumb {
 
     <div class="slabel"><span class="dot"></span> Linear Actuator</div>
     <div class="lin-row">
-      <button class="lin-btn extend" id="linb-ext" onclick="linCmd('extend')">
-        <span class="lin-icon">⬆️</span>
-        <span>EXTEND</span>
-      </button>
-      <button class="lin-btn stop-btn" id="linb-stop" onclick="linCmd('stop')">
-        <span class="lin-icon">⏹️</span>
-        <span>STOP</span>
-      </button>
-      <button class="lin-btn retract" id="linb-ret" onclick="linCmd('retract')">
-        <span class="lin-icon">⬇️</span>
-        <span>RETRACT</span>
-      </button>
+      <button class="lin-btn extend"   id="linb-ext"  onclick="linCmd('extend')"><span class="lin-icon">&#11014;&#65039;</span><span>EXTEND</span></button>
+      <button class="lin-btn stop-btn" id="linb-stop" onclick="linCmd('stop')">  <span class="lin-icon">&#9209;&#65039;</span><span>STOP</span></button>
+      <button class="lin-btn retract"  id="linb-ret"  onclick="linCmd('retract')"><span class="lin-icon">&#11015;&#65039;</span><span>RETRACT</span></button>
     </div>
 
     <div class="slabel"><span class="dot"></span> Automated Harvest Sequence</div>
@@ -757,26 +330,21 @@ input[type=range]::-webkit-slider-thumb {
           <div style="font-size:10px;color:var(--text2);margin-top:4px">Activates worm gears + pump + cycles linear actuator automatically</div>
         </div>
       </div>
-
-      <!-- Live status dots -->
-      <div class="auto-status-row" id="auto-status-row">
+      <div class="auto-status-row">
         <div class="auto-status-cell" id="as-worm1"><div class="dot"></div>WORM 1</div>
         <div class="auto-status-cell" id="as-worm2"><div class="dot"></div>WORM 2</div>
         <div class="auto-status-cell" id="as-lin">  <div class="dot"></div>LINEAR</div>
         <div class="auto-status-cell" id="as-pump"> <div class="dot"></div>PUMP</div>
         <div class="auto-status-cell" id="as-timer"><div class="dot"></div>TIMER</div>
       </div>
-
       <div class="auto-timer" id="auto-timer">00:00</div>
-
       <button class="btn-autoloosen" id="btn-auto" onclick="toggleAutoLoosen()">
-        ⛏ &nbsp; START AUTO LOOSEN
+        &#9935; &nbsp; START AUTO LOOSEN
       </button>
     </div>
+  </div>
 
-  </div><!-- /fops -->
-
-  <!-- ═══════════ TELEMETRY PANEL ══════════════════════════════ -->
+  <!-- TELEMETRY PANEL -->
   <div class="panel" id="panel-telem">
     <div class="slabel"><span class="dot"></span> Live Data</div>
     <div class="telem-grid" id="telem-grid"></div>
@@ -784,94 +352,78 @@ input[type=range]::-webkit-slider-thumb {
     <div class="console" id="console"></div>
   </div>
 
-</div><!-- /app -->
-
+</div>
 <div id="toast"></div>
 
-<!-- ════════════════════════════════════════════════════════════
-     JAVASCRIPT
-════════════════════════════════════════════════════════════ -->
 <script>
-// ── CONFIG ──────────────────────────────────────────────────
-const BROKER       = "test.mosquitto.org";
-const WS_PORT      = 8081;
-const T_DRIVE      = "yam/drive";
-const T_ARM        = "yam/arm";
-const T_IK         = "yam/ik";
-const T_RELAY      = "yam/relay";
-const T_STATUS     = "yam/status";
-const MAX_REACH    = 27.0, MIN_REACH = 3.0;
+// ═══════════════════════════════════════════════════════════════
+//  FIX 1 — useSSL: false  →  plain ws:// on port 8083
+//  FIX 2 — topics match firmware exactly (hexarm/*)
+// ═══════════════════════════════════════════════════════════════
+const BROKER   = "broker.emqx.io";
+const WS_PORT  = 8083;
+const USE_SSL  = false;           // ← FIX 1: was true (forced wss://)
 
-// ── RELAY STATE ──────────────────────────────────────────────
-const relayState = { worm1: false, worm2: false, pump: false };
-let linState = 'stop'; // 'extend' | 'retract' | 'stop'
-let autoRunning = false;
-let autoTimerSec = 0;
-let autoTimerInterval = null;
+// ── FIX 2: exact firmware topic names ───────────────────────
+const T_DRIVE  = "hexarm/drive";
+const T_ARM    = "hexarm/cmd";    // firmware listens on hexarm/cmd, NOT hexarm/arm
+const T_IK     = "hexarm/ik";
+const T_RELAY  = "hexarm/relay";
+const T_STATUS = "hexarm/status";
 
-// ── JOINTS ──────────────────────────────────────────────────
+const MAX_REACH = 27.0, MIN_REACH = 3.0;
+const relayState = { worm1:false, worm2:false, pump:false };
+let autoRunning = false, autoTimerSec = 0, autoTimerInterval = null;
+
+// ── JOINTS ───────────────────────────────────────────────────
 const JOINTS = [
-  { id:'base',        n:'01', name:'Base',        f:'right', b:'left',  fi:'↻', bi:'↺' },
-  { id:'shoulder',    n:'02', name:'Shoulder',    f:'up',    b:'down',  fi:'↑', bi:'↓' },
-  { id:'elbow',       n:'03', name:'Elbow',       f:'up',    b:'down',  fi:'↑', bi:'↓' },
-  { id:'wrist_pitch', n:'04', name:'Wrist Pitch', f:'up',    b:'down',  fi:'↑', bi:'↓' },
-  { id:'wrist_roll',  n:'05', name:'Wrist Roll',  f:'right', b:'left',  fi:'↻', bi:'↺' },
-  { id:'gripper',     n:'06', name:'Gripper',     f:'open',  b:'close', fi:'⟷', bi:'→←' },
+  {id:'base',       n:'01',name:'Base',       f:'right',b:'left', fi:'&#8635;',bi:'&#8634;'},
+  {id:'shoulder',   n:'02',name:'Shoulder',   f:'up',   b:'down', fi:'&#8593;',bi:'&#8595;'},
+  {id:'elbow',      n:'03',name:'Elbow',      f:'up',   b:'down', fi:'&#8593;',bi:'&#8595;'},
+  {id:'wrist_pitch',n:'04',name:'Wrist Pitch',f:'up',   b:'down', fi:'&#8593;',bi:'&#8595;'},
+  {id:'wrist_roll', n:'05',name:'Wrist Roll', f:'right',b:'left', fi:'&#8635;',bi:'&#8634;'},
+  {id:'gripper',    n:'06',name:'Gripper',    f:'open', b:'close',fi:'&#8596;',bi:'&#8594;&#8592;'},
 ];
 const jPos = {};
 JOINTS.forEach(j => { jPos[j.id] = 50; });
 
-// Build joint cards
 const jg = document.getElementById('joints-grid');
 JOINTS.forEach(j => {
   const c = document.createElement('div');
-  c.className = 'jcard'; c.id = 'jc-' + j.id;
-  c.innerHTML = `
-    <span class="jcard-num">${j.n}</span>
-    <div class="jcard-name">${j.name}</div>
-    <div class="arc-wrap">
-      <div class="arc-track"><div class="arc-fill" id="af-${j.id}" style="width:50%"></div></div>
-      <span class="arc-num" id="an-${j.id}">50</span>
-    </div>
-    <div class="jbtn-row">
-      <button class="jbtn" id="jb-${j.id}-b">${j.bi}</button>
-      <button class="jbtn" id="jb-${j.id}-f">${j.fi}</button>
-    </div>`;
+  c.className = 'jcard'; c.id = 'jc-'+j.id;
+  c.innerHTML =
+    '<span class="jcard-num">'+j.n+'</span>'+
+    '<div class="jcard-name">'+j.name+'</div>'+
+    '<div class="arc-wrap"><div class="arc-track"><div class="arc-fill" id="af-'+j.id+'" style="width:50%"></div></div><span class="arc-num" id="an-'+j.id+'">50</span></div>'+
+    '<div class="jbtn-row"><button class="jbtn" id="jb-'+j.id+'-b">'+j.bi+'</button><button class="jbtn" id="jb-'+j.id+'-f">'+j.fi+'</button></div>';
   jg.appendChild(c);
-  attachHold(`jb-${j.id}-f`, j.id, `${j.id},${j.f}`, `${j.id},stop`,  1);
-  attachHold(`jb-${j.id}-b`, j.id, `${j.id},${j.b}`, `${j.id},stop`, -1);
+  attachHold('jb-'+j.id+'-f', j.id, j.id+','+j.f, j.id+',stop',  1);
+  attachHold('jb-'+j.id+'-b', j.id, j.id+','+j.b, j.id+',stop', -1);
 });
 
-// Build telem cells
+// ── TELEM CELLS ──────────────────────────────────────────────
 const telemFields = [
-  { k:'mode',     l:'Mode'         },
-  { k:'shoulder', l:'Shoulder'     },
-  { k:'base_step',l:'Base Step'    },
-  { k:'elbow',    l:'Elbow PWM'    },
-  { k:'speed',    l:'Drive Speed'  },
-  { k:'worm1',    l:'Worm 1'       },
-  { k:'pump',     l:'Pump'         },
-  { k:'auto',     l:'Auto Loosen'  },
+  {k:'mode',l:'Mode'},{k:'shoulder',l:'Shoulder'},{k:'base_step',l:'Base Step'},
+  {k:'elbow',l:'Elbow PWM'},{k:'speed',l:'Drive Speed'},{k:'worm1',l:'Worm 1'},
+  {k:'pump',l:'Pump'},{k:'auto',l:'Auto Pump'},
 ];
 const tg = document.getElementById('telem-grid');
 telemFields.forEach(f => {
   const d = document.createElement('div');
-  d.className = 'telem-cell'; d.id = 'tc-' + f.k;
-  d.innerHTML = `<div class="tc-key">${f.l}</div><div class="tc-val" id="tv-${f.k}">—</div>`;
+  d.className='telem-cell'; d.id='tc-'+f.k;
+  d.innerHTML='<div class="tc-key">'+f.l+'</div><div class="tc-val" id="tv-'+f.k+'">&#8212;</div>';
   tg.appendChild(d);
 });
 
 // ── HOLD-TO-MOVE ─────────────────────────────────────────────
 let holdTick = null;
 function attachHold(btnId, jid, startP, stopP, dir) {
-  const btn  = document.getElementById(btnId);
-  const card = document.getElementById('jc-' + jid);
+  const btn = document.getElementById(btnId);
+  const card = document.getElementById('jc-'+jid);
   const start = e => {
     e.preventDefault();
-    btn.classList.add('held');
-    card.classList.add('firing');
-    armCmd(startP);
-    simPos(jid, dir);
+    btn.classList.add('held'); card.classList.add('firing');
+    armCmd(startP); simPos(jid, dir);
     holdTick = setInterval(() => { armCmd(startP); simPos(jid, dir); }, 120);
   };
   const stop = () => {
@@ -880,280 +432,254 @@ function attachHold(btnId, jid, startP, stopP, dir) {
     clearInterval(holdTick); holdTick = null;
     armCmd(stopP);
   };
-  btn.addEventListener('mousedown',  start, { passive: false });
+  btn.addEventListener('mousedown',  start, {passive:false});
   btn.addEventListener('mouseup',    stop);
   btn.addEventListener('mouseleave', stop);
-  btn.addEventListener('touchstart',  start, { passive: false });
-  btn.addEventListener('touchend',    stop,  { passive: false });
-  btn.addEventListener('touchcancel', stop,  { passive: false });
+  btn.addEventListener('touchstart',  start, {passive:false});
+  btn.addEventListener('touchend',    stop,  {passive:false});
+  btn.addEventListener('touchcancel', stop,  {passive:false});
 }
 function simPos(jid, dir) {
-  jPos[jid] = Math.max(0, Math.min(100, jPos[jid] + dir * 3));
-  const af = document.getElementById('af-' + jid);
-  const an = document.getElementById('an-' + jid);
-  if (af) af.style.width = jPos[jid] + '%';
+  jPos[jid] = Math.max(0, Math.min(100, jPos[jid] + dir*3));
+  const af = document.getElementById('af-'+jid);
+  const an = document.getElementById('an-'+jid);
+  if (af) af.style.width = jPos[jid]+'%';
   if (an) an.textContent = Math.round(jPos[jid]);
 }
 
 // ── D-PAD HOLD ───────────────────────────────────────────────
-let driveHoldDir = null;
 let driveHoldTick = null;
 function attachDrive(btnId, dir) {
   const btn = document.getElementById(btnId);
   const start = e => {
     e.preventDefault();
     btn.classList.add('held');
-    driveHoldDir = dir;
-    drive(dir);
-    driveHoldTick = setInterval(() => drive(dir), 150);
+    sendDrive(dir);
+    driveHoldTick = setInterval(() => sendDrive(dir), 150);
     updateWheelViz(dir);
   };
   const stop = () => {
     btn.classList.remove('held');
-    clearInterval(driveHoldTick);
-    driveHoldTick = null;
-    driveHoldDir = null;
-    drive('stop');
-    updateWheelViz('stop');
+    clearInterval(driveHoldTick); driveHoldTick = null;
+    sendStop(); updateWheelViz('stop');
   };
-  btn.addEventListener('mousedown',  start, { passive: false });
+  btn.addEventListener('mousedown',  start, {passive:false});
   btn.addEventListener('mouseup',    stop);
   btn.addEventListener('mouseleave', stop);
-  btn.addEventListener('touchstart',  start, { passive: false });
-  btn.addEventListener('touchend',    stop,  { passive: false });
-  btn.addEventListener('touchcancel', stop,  { passive: false });
+  btn.addEventListener('touchstart',  start, {passive:false});
+  btn.addEventListener('touchend',    stop,  {passive:false});
+  btn.addEventListener('touchcancel', stop,  {passive:false});
 }
-attachDrive('db-fwd',   'forward');
-attachDrive('db-bwd',   'backward');
+attachDrive('db-fwd',   'fwd');
+attachDrive('db-bwd',   'bwd');
 attachDrive('db-left',  'left');
 attachDrive('db-right', 'right');
 
 function updateWheelViz(dir) {
   const spd = parseInt(document.getElementById('speed-slider').value);
-  const map = {
-    forward:  [ spd,  spd,  spd,  spd],
-    backward: [-spd, -spd, -spd, -spd],
-    left:     [-spd,  spd, -spd,  spd],
-    right:    [ spd, -spd,  spd, -spd],
-    stop:     [0, 0, 0, 0],
-  };
+  const map = { fwd:[spd,spd,spd,spd], bwd:[-spd,-spd,-spd,-spd],
+                left:[-spd,spd,-spd,spd], right:[spd,-spd,spd,-spd], stop:[0,0,0,0] };
   const v = map[dir] || [0,0,0,0];
-  ['wfl','wfr','wbl','wbr'].forEach((id, i) => {
+  ['wfl','wfr','wbl','wbr'].forEach((id,i) => {
     const bar = document.getElementById(id);
-    const val = document.getElementById(id + '-v');
-    const pct = Math.abs(v[i]) / 255 * 50;
-    bar.style.width = pct + '%';
-    bar.className = 'wheel-bar-fill' + (v[i] < 0 ? ' rev' : '');
+    const val = document.getElementById(id+'-v');
+    bar.style.width = Math.abs(v[i])/255*50 + '%';
+    bar.className = 'wheel-bar-fill'+(v[i]<0?' rev':'');
     val.textContent = v[i];
-    val.style.color = v[i] < 0 ? 'var(--amber)' : v[i] > 0 ? 'var(--cyan)' : 'var(--text2)';
+    val.style.color = v[i]<0?'var(--amber)':v[i]>0?'var(--cyan)':'var(--text2)';
   });
 }
 
 // ── KEYBOARD ─────────────────────────────────────────────────
 const heldKeys = new Set();
 const driveKeys = {
-  'ArrowUp': 'forward', 'w': 'forward',
-  'ArrowDown': 'backward', 's': 'backward',
-  'ArrowLeft': 'left', 'a': 'left',
-  'ArrowRight': 'right', 'd': 'right',
-  ' ': 'stop',
+  'ArrowUp':'fwd','w':'fwd','ArrowDown':'bwd','s':'bwd',
+  'ArrowLeft':'left','a':'left','ArrowRight':'right','d':'right',' ':'stop'
 };
 const armKeys = {
-  'q':[-1,'base','left'],   'e':[1,'base','right'],
-  'r':[1,'shoulder','up'],  'f':[-1,'shoulder','down'],
-  't':[1,'elbow','up'],     'g':[-1,'elbow','down'],
-  'y':[1,'wrist_pitch','up'], 'h':[-1,'wrist_pitch','down'],
+  'q':[-1,'base','left'],'e':[1,'base','right'],
+  'r':[1,'shoulder','up'],'f':[-1,'shoulder','down'],
+  't':[1,'elbow','up'],'g':[-1,'elbow','down'],
+  'y':[1,'wrist_pitch','up'],'h':[-1,'wrist_pitch','down'],
   'u':[1,'wrist_roll','right'],'j':[-1,'wrist_roll','left'],
-  'o':[1,'gripper','open'], 'c':[-1,'gripper','close'],
+  'o':[1,'gripper','open'],'c':[-1,'gripper','close']
 };
 document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
+  if (e.target.tagName==='INPUT') return;
   if (heldKeys.has(e.key)) return;
   heldKeys.add(e.key);
   if (driveKeys[e.key]) {
-    drive(driveKeys[e.key]);
-    updateWheelViz(driveKeys[e.key]);
+    if (e.key===' ') { sendStop(); updateWheelViz('stop'); }
+    else { sendDrive(driveKeys[e.key]); updateWheelViz(driveKeys[e.key]); }
   } else if (armKeys[e.key]) {
-    const [dir, jid, dstr] = armKeys[e.key];
-    armCmd(`${jid},${dstr}`);
-    document.getElementById('jc-' + jid)?.classList.add('firing');
+    const [dir,jid,dstr] = armKeys[e.key];
+    armCmd(jid+','+dstr);
+    document.getElementById('jc-'+jid)?.classList.add('firing');
     simPos(jid, dir);
   }
 });
 document.addEventListener('keyup', e => {
   if (!heldKeys.has(e.key)) return;
   heldKeys.delete(e.key);
-  if (driveKeys[e.key]) { drive('stop'); updateWheelViz('stop'); }
+  if (driveKeys[e.key] && e.key!==' ') { sendStop(); updateWheelViz('stop'); }
   else if (armKeys[e.key]) {
-    const [, jid] = armKeys[e.key];
-    armCmd(`${jid},stop`);
-    document.getElementById('jc-' + jid)?.classList.remove('firing');
+    const [,jid] = armKeys[e.key];
+    armCmd(jid+',stop');
+    document.getElementById('jc-'+jid)?.classList.remove('firing');
   }
 });
 
 // ── IK ───────────────────────────────────────────────────────
 function calcReach() {
-  const x = parseFloat(document.getElementById('ik-x').value) || 0;
-  const y = parseFloat(document.getElementById('ik-y').value) || 0;
-  const z = parseFloat(document.getElementById('ik-z').value) || 0;
-  const r = Math.sqrt(x*x + y*y + z*z);
-  const pct = Math.min(r / MAX_REACH * 100, 100);
-  document.getElementById('rval').textContent = r.toFixed(1) + ' cm';
+  const x = parseFloat(document.getElementById('ik-x').value)||0;
+  const y = parseFloat(document.getElementById('ik-y').value)||0;
+  const z = parseFloat(document.getElementById('ik-z').value)||0;
+  const r = Math.sqrt(x*x+y*y+z*z);
+  document.getElementById('rval').textContent = r.toFixed(1)+' cm';
   const bar = document.getElementById('rbar');
-  bar.style.width = pct + '%';
-  bar.className = 'reach-fill' + (r > MAX_REACH ? ' over' : r > MAX_REACH*.8 ? ' warn' : '');
-  document.getElementById('btn-go').disabled = (r > MAX_REACH || r < MIN_REACH);
+  bar.style.width = Math.min(r/MAX_REACH*100,100)+'%';
+  bar.className = 'reach-fill'+(r>MAX_REACH?' over':r>MAX_REACH*.8?' warn':'');
+  document.getElementById('btn-go').disabled = (r>MAX_REACH||r<MIN_REACH);
 }
 calcReach();
 
 function sendIK() {
-  const xEl = document.getElementById('ik-x');
-  const yEl = document.getElementById('ik-y');
-  const zEl = document.getElementById('ik-z');
-  let ok = true;
-  [xEl, yEl, zEl].forEach(el => {
-    if (isNaN(parseFloat(el.value))) { el.classList.add('err'); ok = false; }
+  const xEl=document.getElementById('ik-x'), yEl=document.getElementById('ik-y'), zEl=document.getElementById('ik-z');
+  let ok=true;
+  [xEl,yEl,zEl].forEach(el => {
+    if(isNaN(parseFloat(el.value))){el.classList.add('err');ok=false;}
     else el.classList.remove('err');
   });
-  if (!ok) { toast('Invalid coordinates', 'err'); return; }
-  const x = parseFloat(xEl.value), y = parseFloat(yEl.value), z = parseFloat(zEl.value);
-  pub(T_IK, `${x},${y},${z}`);
-  log('TX', `IK → (${x}, ${y}, ${z})`, 'tx');
-  toast('IK target sent', 'ok');
+  if(!ok){toast('Invalid coordinates','err');return;}
+  const x=parseFloat(xEl.value),y=parseFloat(yEl.value),z=parseFloat(zEl.value);
+  pub(T_IK, x+','+y+','+z);
+  log('TX','IK → ('+x+', '+y+', '+z+')','tx');
+  toast('IK target sent','ok');
 }
 
 // ── RELAY / FIELD OPS ────────────────────────────────────────
 function toggleRelay(target, cardId) {
   const on = !relayState[target];
   relayState[target] = on;
-  const card  = document.getElementById(cardId);
-  const badge = document.getElementById('rb-' + target);
-  card.className  = 'relay-card' + (on ? ' on' : '');
-  badge.textContent = on ? 'ON' : 'OFF';
-  pub(T_RELAY, `${target},${on ? 'on' : 'off'}`);
-  log('TX', `Relay ${target} → ${on ? 'ON' : 'OFF'}`, 'tx');
+  document.getElementById(cardId).className = 'relay-card'+(on?' on':'');
+  document.getElementById('rb-'+target).textContent = on?'ON':'OFF';
+  pub(T_RELAY, target+','+(on?'on':'off'));
+  log('TX','Relay '+target+' → '+(on?'ON':'OFF'),'tx');
   updateFopsSysStatus();
 }
 
-let linActiveBtn = null;
 function linCmd(state) {
-  linState = state;
   ['linb-ext','linb-stop','linb-ret'].forEach(id => document.getElementById(id).classList.remove('active'));
-  const map = { extend:'linb-ext', stop:'linb-stop', retract:'linb-ret' };
-  if (map[state]) document.getElementById(map[state]).classList.add('active');
-  pub(T_RELAY, `linear,${state}`);
-  log('TX', `Linear actuator → ${state.toUpperCase()}`, 'tx');
+  const map = {extend:'linb-ext',stop:'linb-stop',retract:'linb-ret'};
+  if(map[state]) document.getElementById(map[state]).classList.add('active');
+  pub(T_RELAY, 'actuator,'+state);       // matches firmware: "actuator,extend" etc.
+  log('TX','Linear actuator → '+state.toUpperCase(),'tx');
 }
 
 function updateFopsSysStatus() {
-  const anyOn = relayState.worm1 || relayState.worm2 || relayState.pump || autoRunning;
-  const badge = document.getElementById('fops-sys-badge');
-  const card  = document.querySelector('.relay-card:last-child');
-  badge.textContent = autoRunning ? 'AUTO' : anyOn ? 'ACTIVE' : 'IDLE';
-  card.className = 'relay-card' + (autoRunning ? ' warn-on' : anyOn ? ' on' : '');
+  const anyOn = relayState.worm1||relayState.worm2||relayState.pump||autoRunning;
+  document.getElementById('fops-sys-badge').textContent = autoRunning?'AUTO':anyOn?'ACTIVE':'IDLE';
+  const card = document.getElementById('rc-status');
+  if(card) card.className = 'relay-card'+(autoRunning?' warn-on':anyOn?' on':'');
 }
 
-// Auto-loosen sequence
 function toggleAutoLoosen() {
   autoRunning = !autoRunning;
   const btn = document.getElementById('btn-auto');
-
-  if (autoRunning) {
-    btn.textContent = '⏹ &nbsp; STOP AUTO LOOSEN';
-    btn.innerHTML   = '⏹ &nbsp; STOP AUTO LOOSEN';
+  if(autoRunning) {
+    btn.innerHTML = '&#9209; &nbsp; STOP AUTO LOOSEN';
     btn.classList.add('running');
-    pub(T_RELAY, 'autoloosen,start');
-    log('TX', 'Auto-loosen sequence STARTED', 'sys');
-    toast('Auto-loosen started', 'ok');
+    // Send individual relay commands the firmware understands
+    pub(T_RELAY,'worm1,on');
+    pub(T_RELAY,'worm2,on');
+    pub(T_RELAY,'autopump,1');           // let firmware auto-manage pump
+    pub(T_RELAY,'actuator,extend');
+    log('TX','Auto-loosen sequence STARTED','sys');
+    toast('Auto-loosen started','ok');
     autoTimerSec = 0;
     autoTimerInterval = setInterval(() => {
       autoTimerSec++;
       const m = String(Math.floor(autoTimerSec/60)).padStart(2,'0');
-      const s = String(autoTimerSec % 60).padStart(2,'0');
-      document.getElementById('auto-timer').textContent = m + ':' + s;
+      const s = String(autoTimerSec%60).padStart(2,'0');
+      document.getElementById('auto-timer').textContent = m+':'+s;
       document.getElementById('auto-timer').classList.add('running');
     }, 1000);
-    // Activate status dots
-    ['as-worm1','as-worm2','as-pump'].forEach(id =>
-      document.getElementById(id).classList.add('live'));
+    ['as-worm1','as-worm2','as-pump'].forEach(id => document.getElementById(id).classList.add('live'));
     document.getElementById('as-lin').classList.add('lin-live');
     document.getElementById('as-timer').classList.add('live');
-    // Also sync relay cards
     ['worm1','worm2','pump'].forEach(t => {
-      relayState[t] = true;
-      const card  = document.getElementById('rc-' + t);
-      const badge = document.getElementById('rb-' + t);
-      if (card)  card.className  = 'relay-card on';
-      if (badge) badge.textContent = 'ON';
+      relayState[t]=true;
+      const card=document.getElementById('rc-'+t), badge=document.getElementById('rb-'+t);
+      if(card)  card.className='relay-card on';
+      if(badge) badge.textContent='ON';
     });
   } else {
-    btn.innerHTML = '⛏ &nbsp; START AUTO LOOSEN';
+    btn.innerHTML = '&#9935; &nbsp; START AUTO LOOSEN';
     btn.classList.remove('running');
-    pub(T_RELAY, 'autoloosen,stop');
-    log('TX', 'Auto-loosen sequence STOPPED', 'sys');
-    toast('Auto-loosen stopped', 'war');
-    clearInterval(autoTimerInterval);
-    autoTimerInterval = null;
+    pub(T_RELAY,'worm1,off');
+    pub(T_RELAY,'worm2,off');
+    pub(T_RELAY,'autopump,0');
+    pub(T_RELAY,'actuator,stop');
+    log('TX','Auto-loosen sequence STOPPED','sys');
+    toast('Auto-loosen stopped','war');
+    clearInterval(autoTimerInterval); autoTimerInterval=null;
     document.getElementById('auto-timer').classList.remove('running');
     ['as-worm1','as-worm2','as-pump','as-lin','as-timer'].forEach(id =>
-      document.getElementById(id).classList.remove('live', 'lin-live'));
-    // Reset relay cards
+      document.getElementById(id).classList.remove('live','lin-live'));
     ['worm1','worm2','pump'].forEach(t => {
-      relayState[t] = false;
-      const card  = document.getElementById('rc-' + t);
-      const badge = document.getElementById('rb-' + t);
-      if (card)  card.className  = 'relay-card';
-      if (badge) badge.textContent = 'OFF';
+      relayState[t]=false;
+      const card=document.getElementById('rc-'+t), badge=document.getElementById('rb-'+t);
+      if(card)  card.className='relay-card';
+      if(badge) badge.textContent='OFF';
     });
-    linState = 'stop';
-    document.getElementById('linb-stop').classList.add('active');
-    setTimeout(() => document.getElementById('linb-stop').classList.remove('active'), 600);
+    const ls=document.getElementById('linb-stop');
+    if(ls){ls.classList.add('active');setTimeout(()=>ls.classList.remove('active'),600);}
   }
   updateFopsSysStatus();
 }
 
 // ── MQTT HELPERS ─────────────────────────────────────────────
-function drive(dir) {
+function sendDrive(dir) {
   const spd = parseInt(document.getElementById('speed-slider').value);
-  pub(T_DRIVE, `${dir},${spd}`);
+  pub(T_DRIVE, dir+','+spd);
 }
+function sendStop() { pub(T_DRIVE,'stop'); updateWheelViz('stop'); }
 function armCmd(payload) { pub(T_ARM, payload); }
 function pub(topic, payload) {
-  if (!mqtt.isConnected()) return;
+  if(!mqttClient.isConnected()) return;
   const m = new Paho.Message(payload);
   m.destinationName = topic;
-  mqtt.send(m);
+  mqttClient.send(m);
 }
 
 // ── MQTT CLIENT ──────────────────────────────────────────────
-const clientId = 'AGRIWEB_' + Math.random().toString(36).substr(2,6).toUpperCase();
-const mqtt = new Paho.Client(BROKER, WS_PORT, clientId);
+const clientId   = 'AGRIWEB_'+Math.random().toString(36).substr(2,6).toUpperCase();
+const mqttClient = new Paho.Client(BROKER, WS_PORT, clientId);
 let connRetry = 0;
 
-mqtt.onConnectionLost = () => {
+mqttClient.onConnectionLost = () => {
   setConn(false);
-  log('ERR', 'Connection lost', 'err');
-  const delay = Math.min(1000 * Math.pow(2, connRetry++), 30000);
-  setTimeout(connect, delay);
+  log('ERR','Connection lost — retrying…','err');
+  setTimeout(connect, Math.min(1000*Math.pow(2,connRetry++),30000));
 };
-mqtt.onMessageArrived = msg => {
-  if (msg.destinationName === T_STATUS) handleStatus(msg.payloadString);
+mqttClient.onMessageArrived = msg => {
+  if(msg.destinationName===T_STATUS) handleStatus(msg.payloadString);
 };
 
 function connect() {
-  log('SYS', `Connecting to ${BROKER}…`, 'sys');
-  mqtt.connect({
-    useSSL: true,
+  log('SYS','Connecting to '+BROKER+':'+WS_PORT+'…','sys');
+  mqttClient.connect({
+    useSSL: USE_SSL,    // ← FIX 1: false → plain ws:// on port 8083
     onSuccess: () => {
-      setConn(true); connRetry = 0;
-      mqtt.subscribe(T_STATUS);
-      log('SYS', `Online · ${clientId}`, 'sys');
-      toast('Connected', 'ok');
+      setConn(true); connRetry=0;
+      mqttClient.subscribe(T_STATUS);
+      log('SYS','Online · '+clientId,'sys');
+      toast('Connected','ok');
     },
     onFailure: e => {
       setConn(false);
-      const delay = Math.min(1000 * Math.pow(2, connRetry++), 30000);
-      log('ERR', `Failed: ${e.errorMessage}`, 'err');
+      const delay = Math.min(1000*Math.pow(2,connRetry++),30000);
+      log('ERR','Failed: '+e.errorMessage+' — retry in '+delay/1000+'s','err');
       setTimeout(connect, delay);
     }
   });
@@ -1163,86 +689,77 @@ function handleStatus(raw) {
   log('RX', raw, 'rx');
   try {
     const d = JSON.parse(raw);
+    // Map firmware JSON fields (from telemetry snprintf) to display cells
     const map = {
-      mode:      (d.mode || '—').toUpperCase(),
-      shoulder:  d.shoulder != null ? d.shoulder.toFixed(1)+'°' : '—',
-      base_step: d.base_step ?? '—',
-      elbow:     d.elbow_pwm != null ? d.elbow_pwm+' PWM' : '—',
-      speed:     d.drive ? Math.max(...d.drive.map(Math.abs)) : '—',
-      worm1:     d.worm1 != null ? (d.worm1 ? 'ON' : 'OFF') : '—',
-      pump:      d.pump  != null ? (d.pump  ? 'ON' : 'OFF') : '—',
-      auto:      d.auto  != null ? (d.auto  ? 'ACTIVE' : 'IDLE') : '—',
+      mode:      (d.mode||'—').toUpperCase(),
+      shoulder:  d.shoulder  !=null ? d.shoulder.toFixed(1)+'°' : '—',
+      base_step: d.base_step !=null ? d.base_step : '—',
+      elbow:     '—',                       // firmware doesn't publish elbow_pwm yet
+      speed:     d.spd       !=null ? d.spd : '—',
+      worm1:     d.worm1     !=null ? (d.worm1?'ON':'OFF') : '—',
+      pump:      d.pump      !=null ? (d.pump ?'ON':'OFF') : '—',
+      auto:      d.autopump  !=null ? (d.autopump?'ON':'OFF') : '—',
     };
-    for (const [k, v] of Object.entries(map)) {
-      const el = document.getElementById('tv-' + k);
-      const cell = document.getElementById('tc-' + k);
-      if (el) el.textContent = v;
-      if (cell) {
-        cell.classList.add('flash');
-        setTimeout(() => cell.classList.remove('flash'), 800);
-      }
+    for(const [k,v] of Object.entries(map)) {
+      const el=document.getElementById('tv-'+k), cell=document.getElementById('tc-'+k);
+      if(el) el.textContent=v;
+      if(cell){cell.classList.add('flash');setTimeout(()=>cell.classList.remove('flash'),800);}
     }
-    // Sync arm position
-    if (d.shoulder != null) simPos('shoulder', 0); // reset, actual set below
   } catch(_) {}
 }
 
 // ── UI HELPERS ───────────────────────────────────────────────
 function setConn(ok) {
-  const pill = document.getElementById('conn-pill');
-  const txt  = document.getElementById('conn-txt');
-  pill.className = 'stat-chip ' + (ok ? 'ok' : 'err');
-  txt.textContent = ok ? 'ONLINE' : 'OFFLINE';
+  document.getElementById('conn-pill').className = 'stat-chip '+(ok?'ok':'err');
+  document.getElementById('conn-txt').textContent = ok?'ONLINE':'OFFLINE';
 }
 
 let toastTimer;
-function toast(msg, type = 'ok') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'show ' + type;
+function toast(msg, type='ok') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show '+type;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.className = '', 2800);
+  toastTimer=setTimeout(()=>t.className='',2800);
 }
 
-const con = document.getElementById('console');
-function log(prefix, text, cls) {
-  const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
-  const line = document.createElement('div');
-  line.className = 'log-line';
-  line.innerHTML = `<span class="l-ts">${ts}</span><span class="l-${cls}">[${prefix}] ${text}</span>`;
+const con=document.getElementById('console');
+function log(prefix,text,cls) {
+  const ts=new Date().toLocaleTimeString('en-US',{hour12:false});
+  const line=document.createElement('div');
+  line.className='log-line';
+  line.innerHTML='<span class="l-ts">'+ts+'</span><span class="l-'+cls+'">['+prefix+'] '+text+'</span>';
   con.prepend(line);
-  while (con.children.length > 80) con.removeChild(con.lastChild);
+  while(con.children.length>80) con.removeChild(con.lastChild);
 }
 
-function swTab(name, btn) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
+function swTab(name,btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
   btn.classList.add('active');
 }
 
 // ── BACKGROUND CANVAS ────────────────────────────────────────
-(function() {
-  const c = document.getElementById('bgc'), ctx = c.getContext('2d');
-  function draw() {
-    c.width = innerWidth; c.height = innerHeight;
+(function(){
+  const c=document.getElementById('bgc'),ctx=c.getContext('2d');
+  function draw(){
+    c.width=innerWidth; c.height=innerHeight;
     ctx.clearRect(0,0,c.width,c.height);
-    const S = 46;
-    ctx.strokeStyle = 'rgba(0,230,118,0.035)'; ctx.lineWidth = .5;
-    for (let x = 0; x < c.width; x += S) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,c.height); ctx.stroke(); }
-    for (let y = 0; y < c.height; y += S) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(c.width,y); ctx.stroke(); }
-    // Corner brackets
-    [[0,0,1,1],[c.width,0,-1,1],[0,c.height,1,-1],[c.width,c.height,-1,-1]].forEach(([x,y,dx,dy]) => {
-      ctx.strokeStyle = 'rgba(0,230,118,0.2)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(x+dx*30,y); ctx.lineTo(x+dx*4,y); ctx.lineTo(x,y+dy*4); ctx.lineTo(x,y+dy*30); ctx.stroke();
+    const S=46;
+    ctx.strokeStyle='rgba(0,230,118,0.035)'; ctx.lineWidth=.5;
+    for(let x=0;x<c.width;x+=S){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
+    for(let y=0;y<c.height;y+=S){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
+    [[0,0,1,1],[c.width,0,-1,1],[0,c.height,1,-1],[c.width,c.height,-1,-1]].forEach(([x,y,dx,dy])=>{
+      ctx.strokeStyle='rgba(0,230,118,0.2)'; ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x+dx*30,y);ctx.lineTo(x+dx*4,y);ctx.lineTo(x,y+dy*4);ctx.lineTo(x,y+dy*30);ctx.stroke();
     });
   }
-  window.addEventListener('resize', draw); draw();
+  window.addEventListener('resize',draw); draw();
 })();
 
 // ── INIT ─────────────────────────────────────────────────────
 connect();
-log('SYS', `AGRIBOT-S3 panel loaded · ${clientId}`, 'sys');
+log('SYS','AGRIBOT-S3 panel loaded · '+clientId,'sys');
 </script>
 </body>
 </html>
