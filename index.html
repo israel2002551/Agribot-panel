@@ -125,7 +125,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
 .auto-header{display:flex;justify-content:space-between;align-items:center}
 .auto-title{font-family:var(--orb);font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--text0)}
 .auto-status-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.auto-status-cell{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:9px;color:var(--text2);font-family:var(--orb);letter-spacing:.1em}
+.auto-status-cell{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:9px;color:var(--text2);font-family:var(--orb);letter-spacing:.1em;text-align:center;}
 .auto-status-cell .dot{width:8px;height:8px;border-radius:50%;background:var(--bg0);border:1px solid var(--border);transition:background .3s,box-shadow .3s}
 .auto-status-cell.live .dot{background:var(--green);box-shadow:0 0 6px var(--green)}
 .auto-status-cell.live{color:var(--green)}
@@ -168,17 +168,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
 
 <div id="app">
 
-  <!-- HEADER -->
   <header>
     <div class="brand">
       <div class="brand-name">AGRIBOT&#8209;S3</div>
-      <div class="brand-ver">Yam Harvester Control v1.1</div>
+      <div class="brand-ver">Yam Harvester Control v2.4</div>
     </div>
     <div class="header-right">
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
         <span style="font-size:8px;color:var(--text2);letter-spacing:.18em">BROKER</span>
-        <!-- FIX 1: plain ws:// on port 8083 (no SSL) -->
-        <span style="font-size:10px;color:var(--text1)">ws://broker.emqx.io:8083/mqtt</span>
+        <span style="font-size:10px;color:var(--text1)">wss://broker.hivemq.com:8884</span>
       </div>
       <div class="stat-chip" id="conn-pill">
         <div class="chip-dot"></div>
@@ -187,7 +185,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
     </div>
   </header>
 
-  <!-- TABS -->
   <div class="tabbar">
     <button class="tab active" onclick="swTab('drive',this)">&#128663; Drive</button>
     <button class="tab"        onclick="swTab('arm',this)">&#129470; Arm</button>
@@ -196,7 +193,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
     <button class="tab"        onclick="swTab('telem',this)">&#128225; Telemetry</button>
   </div>
 
-  <!-- DRIVE PANEL -->
   <div class="panel active" id="panel-drive">
     <div class="drive-layout">
 
@@ -255,7 +251,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
     </div>
   </div>
 
-  <!-- ARM PANEL -->
   <div class="panel" id="panel-arm">
     <div class="slabel"><span class="dot"></span> 6-DOF Arm &mdash; Manual Control</div>
     <div class="joints-grid" id="joints-grid"></div>
@@ -270,7 +265,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
     </div>
   </div>
 
-  <!-- IK PANEL -->
   <div class="panel" id="panel-ik">
     <div class="slabel"><span class="dot"></span> Target Position (cm)</div>
     <div class="ik-grid">
@@ -289,14 +283,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
     <button class="btn-go" id="btn-go" onclick="sendIK()">&#9654; &nbsp; Execute IK Target</button>
   </div>
 
-  <!-- FIELD OPS PANEL -->
   <div class="panel" id="panel-fops">
     <div class="slabel"><span class="dot"></span> Soil Loosening Actuators</div>
     <div class="fops-grid">
-      <div class="relay-card" id="rc-worm1" onclick="toggleRelay('worm1','rc-worm1')">
+      <div class="relay-card" id="rc-worm_gear" onclick="toggleRelay('worm_gear','rc-worm_gear')">
         <div class="relay-icon">&#9881;&#65039;</div>
-        <div class="relay-label">Worm Gear 1</div>
-        <div class="relay-badge" id="rb-worm1">OFF</div>
+        <div class="relay-label">Worm Gear</div>
+        <div class="relay-badge" id="rb-worm_gear">OFF</div>
       </div>
       <div class="relay-card" id="rc-worm2" onclick="toggleRelay('worm2','rc-worm2')">
         <div class="relay-icon">&#9881;&#65039;</div>
@@ -331,7 +324,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
         </div>
       </div>
       <div class="auto-status-row">
-        <div class="auto-status-cell" id="as-worm1"><div class="dot"></div>WORM 1</div>
+        <div class="auto-status-cell" id="as-worm_gear"><div class="dot"></div>WORM GEAR</div>
         <div class="auto-status-cell" id="as-worm2"><div class="dot"></div>WORM 2</div>
         <div class="auto-status-cell" id="as-lin">  <div class="dot"></div>LINEAR</div>
         <div class="auto-status-cell" id="as-pump"> <div class="dot"></div>PUMP</div>
@@ -344,7 +337,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
     </div>
   </div>
 
-  <!-- TELEMETRY PANEL -->
   <div class="panel" id="panel-telem">
     <div class="slabel"><span class="dot"></span> Live Data</div>
     <div class="telem-grid" id="telem-grid"></div>
@@ -357,25 +349,23 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  FIX 1 — useSSL: false  →  plain ws:// on port 8083
-//  FIX 2 — topics match firmware exactly (hexarm/*)
-// ═══════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════
 //  UPDATE: Aligned with ESP32 Firmware (HiveMQ) and Secure WebSockets
 // ═══════════════════════════════════════════════════════════════
 const BROKER  = "broker.hivemq.com";
 const WS_PORT = 8884;             // HiveMQ's Secure WebSocket Port
 const USE_SSL = true;             // Required to prevent browser security blocks
 
-// ── FIX 2: exact firmware topic names ───────────────────────
+// ── FIXED: EXACT FIRMWARE TOPIC NAMES ───────────────────────
 const T_DRIVE  = "hexarm/drive";
-const T_ARM    = "hexarm/cmd";    // firmware listens on hexarm/cmd, NOT hexarm/arm
+const T_ARM    = "hexarm/cmd";    
 const T_IK     = "hexarm/ik";
-const T_RELAY  = "hexarm/relay";
+// FIXED RELAY TOPIC TO MATCH FIRMWARE
+const T_RELAY  = "hexarm/cmd"; 
 const T_STATUS = "hexarm/status";
 
 const MAX_REACH = 27.0, MIN_REACH = 3.0;
-const relayState = { worm1:false, worm2:false, pump:false };
+// FIXED STATE VAR TO MATCH WORM GEAR
+const relayState = { worm_gear:false, worm2:false, pump:false };
 let autoRunning = false, autoTimerSec = 0, autoTimerInterval = null;
 
 // ── JOINTS ───────────────────────────────────────────────────
@@ -404,10 +394,11 @@ JOINTS.forEach(j => {
   attachHold('jb-'+j.id+'-b', j.id, j.id+','+j.b, j.id+',stop', -1);
 });
 
-// ── TELEM CELLS ──────────────────────────────────────────────
+// ── FIXED TELEM CELLS ──────────────────────────────────────────────
 const telemFields = [
   {k:'mode',l:'Mode'},{k:'shoulder',l:'Shoulder'},{k:'base_step',l:'Base Step'},
-  {k:'elbow',l:'Elbow PWM'},{k:'speed',l:'Drive Speed'},{k:'worm1',l:'Worm 1'},
+  {k:'elbow',l:'Elbow PWM'},{k:'speed',l:'Drive Speed'},
+  {k:'worm_gear',l:'Worm Gear'}, // FIXED FROM worm1 TO worm_gear
   {k:'pump',l:'Pump'},{k:'auto',l:'Auto Pump'},
 ];
 const tg = document.getElementById('telem-grid');
@@ -575,12 +566,12 @@ function linCmd(state) {
   ['linb-ext','linb-stop','linb-ret'].forEach(id => document.getElementById(id).classList.remove('active'));
   const map = {extend:'linb-ext',stop:'linb-stop',retract:'linb-ret'};
   if(map[state]) document.getElementById(map[state]).classList.add('active');
-  pub(T_RELAY, 'actuator,'+state);       // matches firmware: "actuator,extend" etc.
+  pub(T_RELAY, 'actuator,'+state);       
   log('TX','Linear actuator → '+state.toUpperCase(),'tx');
 }
 
 function updateFopsSysStatus() {
-  const anyOn = relayState.worm1||relayState.worm2||relayState.pump||autoRunning;
+  const anyOn = relayState.worm_gear||relayState.worm2||relayState.pump||autoRunning;
   document.getElementById('fops-sys-badge').textContent = autoRunning?'AUTO':anyOn?'ACTIVE':'IDLE';
   const card = document.getElementById('rc-status');
   if(card) card.className = 'relay-card'+(autoRunning?' warn-on':anyOn?' on':'');
@@ -592,10 +583,11 @@ function toggleAutoLoosen() {
   if(autoRunning) {
     btn.innerHTML = '&#9209; &nbsp; STOP AUTO LOOSEN';
     btn.classList.add('running');
-    // Send individual relay commands the firmware understands
-    pub(T_RELAY,'worm1,on');
+    
+    // FIXED TO WORM_GEAR
+    pub(T_RELAY,'worm_gear,on');
     pub(T_RELAY,'worm2,on');
-    pub(T_RELAY,'autopump,1');           // let firmware auto-manage pump
+    pub(T_RELAY,'autopump,1');           
     pub(T_RELAY,'actuator,extend');
     log('TX','Auto-loosen sequence STARTED','sys');
     toast('Auto-loosen started','ok');
@@ -607,10 +599,11 @@ function toggleAutoLoosen() {
       document.getElementById('auto-timer').textContent = m+':'+s;
       document.getElementById('auto-timer').classList.add('running');
     }, 1000);
-    ['as-worm1','as-worm2','as-pump'].forEach(id => document.getElementById(id).classList.add('live'));
+    
+    ['as-worm_gear','as-worm2','as-pump'].forEach(id => document.getElementById(id).classList.add('live'));
     document.getElementById('as-lin').classList.add('lin-live');
     document.getElementById('as-timer').classList.add('live');
-    ['worm1','worm2','pump'].forEach(t => {
+    ['worm_gear','worm2','pump'].forEach(t => {
       relayState[t]=true;
       const card=document.getElementById('rc-'+t), badge=document.getElementById('rb-'+t);
       if(card)  card.className='relay-card on';
@@ -619,7 +612,7 @@ function toggleAutoLoosen() {
   } else {
     btn.innerHTML = '&#9935; &nbsp; START AUTO LOOSEN';
     btn.classList.remove('running');
-    pub(T_RELAY,'worm1,off');
+    pub(T_RELAY,'worm_gear,off');
     pub(T_RELAY,'worm2,off');
     pub(T_RELAY,'autopump,0');
     pub(T_RELAY,'actuator,stop');
@@ -627,9 +620,10 @@ function toggleAutoLoosen() {
     toast('Auto-loosen stopped','war');
     clearInterval(autoTimerInterval); autoTimerInterval=null;
     document.getElementById('auto-timer').classList.remove('running');
-    ['as-worm1','as-worm2','as-pump','as-lin','as-timer'].forEach(id =>
+    
+    ['as-worm_gear','as-worm2','as-pump','as-lin','as-timer'].forEach(id =>
       document.getElementById(id).classList.remove('live','lin-live'));
-    ['worm1','worm2','pump'].forEach(t => {
+    ['worm_gear','worm2','pump'].forEach(t => {
       relayState[t]=false;
       const card=document.getElementById('rc-'+t), badge=document.getElementById('rb-'+t);
       if(card)  card.className='relay-card';
@@ -672,7 +666,7 @@ mqttClient.onMessageArrived = msg => {
 function connect() {
   log('SYS','Connecting to '+BROKER+':'+WS_PORT+'…','sys');
   mqttClient.connect({
-    useSSL: USE_SSL,    // ← FIX 1: false → plain ws:// on port 8083
+    useSSL: USE_SSL,    
     onSuccess: () => {
       setConn(true); connRetry=0;
       mqttClient.subscribe(T_STATUS);
@@ -692,17 +686,19 @@ function handleStatus(raw) {
   log('RX', raw, 'rx');
   try {
     const d = JSON.parse(raw);
-    // Map firmware JSON fields (from telemetry snprintf) to display cells
+    
+    // FIXED TELEMETRY MAPPING TO READ `d.worm` INSTEAD OF `d.worm1`
     const map = {
       mode:      (d.mode||'—').toUpperCase(),
       shoulder:  d.shoulder  !=null ? d.shoulder.toFixed(1)+'°' : '—',
       base_step: d.base_step !=null ? d.base_step : '—',
-      elbow:     '—',                       // firmware doesn't publish elbow_pwm yet
+      elbow:     '—',                       
       speed:     d.spd       !=null ? d.spd : '—',
-      worm1:     d.worm1     !=null ? (d.worm1?'ON':'OFF') : '—',
+      worm_gear: d.worm      !=null ? (d.worm === 1 ? 'ON' : 'OFF') : '—', 
       pump:      d.pump      !=null ? (d.pump ?'ON':'OFF') : '—',
       auto:      d.autopump  !=null ? (d.autopump?'ON':'OFF') : '—',
     };
+    
     for(const [k,v] of Object.entries(map)) {
       const el=document.getElementById('tv-'+k), cell=document.getElementById('tc-'+k);
       if(el) el.textContent=v;
